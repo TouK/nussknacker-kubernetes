@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: flink-pv-claim
+  namespace: nussknacker
+  labels:
+    app: flink
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "aws-efs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: flink-jobmanager
+  namespace: nussknacker
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: jobmanager
+    spec:
+      containers:
+      - name: jobmanager
+        image: touk/flink:1.4.2
+        args:
+        - jobmanager
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "0.5"
+        ports:
+        - containerPort: 6123
+          name: rpc
+        - containerPort: 6124
+          name: blob
+        - containerPort: 6125
+          name: query
+        - containerPort: 8081
+          name: ui
+        - containerPort: 50010
+          name: ha
+        env:
+        - name: JOB_MANAGER_RPC_ADDRESS
+          value: flink-jobmanager
+        volumeMounts:
+        - name: flink-jobmanager-persistent-storage
+          mountPath: /opt/flinkData
+        - name: flink-conf-volume
+          mountPath: /opt/flink/conf/flink-conf.yaml
+          subPath: flink-conf.yaml
+      volumes:
+      - name: flink-jobmanager-persistent-storage
+        persistentVolumeClaim:
+          claimName: flink-pv-claim
+      - name: flink-conf-volume
+        configMap:
+          name: flink-conf-v1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flink-jobmanager
+  namespace: nussknacker
+spec:
+  ports:
+  - name: rpc
+    port: 6123
+  - name: blob
+    port: 6124
+  - name: query
+    port: 6125
+  - name: ui
+    port: 8081
+  - name: ha
+    port: 50010
+  selector:
+    app: flink
+    component: jobmanager
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: flink-taskmanager
+  namespace: nussknacker
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: taskmanager
+    spec:
+      containers:
+      - name: taskmanager
+        image: 061600332985.dkr.ecr.eu-central-1.amazonaws.com/flink:1.4.2-nussknacker-v1
+        args:
+        - taskmanager
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+        ports:
+        - containerPort: 6121
+          name: data
+        - containerPort: 6122
+          name: rpc
+        - containerPort: 6125
+          name: query
+        env:
+        - name: JOB_MANAGER_RPC_ADDRESS
+          value: flink-jobmanager
+        volumeMounts:
+        - name: flink-taskmanager-persistent-storage
+          mountPath: /opt/flinkData
+        - name: flink-conf-volume
+          mountPath: /opt/flink/conf/flink-conf.yaml
+          subPath: flink-conf.yaml
+      volumes:
+      - name: flink-taskmanager-persistent-storage
+        persistentVolumeClaim:
+          claimName: flink-pv-claim
+      - name: flink-conf-volume
+        configMap:
+          name: flink-conf-v1

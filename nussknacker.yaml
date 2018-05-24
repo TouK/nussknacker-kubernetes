@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nussknacker
+  namespace: nussknacker
+spec:
+  ports:
+  - name: nussknacker
+    port: 8080
+  selector:
+    app: nussknacker
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nussknacker-pv-claim
+  namespace: nussknacker
+  labels:
+    app: nussknacker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nussknacker
+  namespace: nussknacker
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nussknacker
+    spec:
+      containers:
+      - name: nussknacker
+        image: touk/nussknacker:0.0.8-with-example
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "0.5"
+        volumeMounts:
+        - name: nussknacker-conf-volume
+          mountPath: ./conf
+        - name: nussknacker-datadir
+          mountPath: /db
+        - name: nussknacker-flink-persistent-storage
+          mountPath: /opt/flinkData
+        ports:
+        - containerPort: 8080
+          name: http
+      volumes:
+      - name: nussknacker-conf-volume
+        configMap:
+          name: nussknacker-conf-v1
+      - name: nussknacker-datadir
+        persistentVolumeClaim:
+          claimName: nussknacker-pv-claim
+      - name: nussknacker-flink-persistent-storage
+        persistentVolumeClaim:
+          claimName: flink-pv-claim

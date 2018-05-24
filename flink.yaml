@@ -106,8 +106,8 @@ spec:
         - taskmanager
         resources:
           requests:
-            memory: "2Gi"
-            cpu: "1"
+            memory: "1Gi"
+            cpu: "0.5"
         ports:
         - containerPort: 6121
           name: data

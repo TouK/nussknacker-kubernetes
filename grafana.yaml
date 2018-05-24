@@ -21,6 +21,10 @@ spec:
           value: "true"
         - name: GF_SERVER_ROOT_URL
           value: "%(protocol)s://%(domain)s:/grafana"
+        resources:
+          requests:
+            memory: "0.5Gi"
+            cpu: "0.25"
 ---
 apiVersion: v1
 kind: Service

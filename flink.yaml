@@ -101,7 +101,7 @@ spec:
     spec:
       containers:
       - name: taskmanager
-        image: 061600332985.dkr.ecr.eu-central-1.amazonaws.com/flink:1.4.2-nussknacker-v1
+        image: touk/flink:1.4.2
         args:
         - taskmanager
         resources:
